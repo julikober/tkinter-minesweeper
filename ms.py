@@ -1,6 +1,6 @@
 # Author: Julian Kober
 
-from tkinter import Tk, StringVar, Radiobutton, IntVar, Button, PhotoImage, Frame
+from tkinter import Tk, StringVar, Radiobutton, IntVar, Button, PhotoImage, Frame, Label, Toplevel
 from tkinter import ttk
 from PIL import Image, ImageTk
 import random
@@ -8,9 +8,20 @@ import sys
 
 # Main Window
 root = Tk()
-root.title("Minesweeper")
+root.resizable(False, False)
 
-game = Frame(root, bg="#888", pady=5, padx=5)
+
+mainframe = Frame(root, bg = "#d9d9d9", padx=5, pady=5)
+mainframe.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
+
+top = Frame(mainframe, bg="#d9d9d9", bd=3, relief="sunken")
+top.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
+
+Label(top).pack()
+
+game_border = Frame(mainframe, bg="#d9d9d9", bd=6, relief="sunken")
+game_border.grid(column=0, row=1, sticky=("N", "W", "E", "S"))
+game = Frame(game_border, bg="#888")
 game.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
@@ -76,7 +87,7 @@ def check_mouse_position(button):
     if mx - bx in range(button_all+5) and my - by in range(button_all+5):
         return True
 
-def show_result(button):
+def show_result(button, e = None):
     button.config(borderwidth=0,
                   width=button_all-2,
                   height=button_all-2,
@@ -86,6 +97,21 @@ def show_result(button):
     icon = fields[buttons.index(button)]
     if icon is not None:
         button.config(image=icons[icon])
+
+        if icon == 0 and e:
+            print("lost!")
+            button.config(bg="#f00", activebackground="#f00")
+            for i, field in enumerate(fields):
+                if field == 0:
+                    show_result(buttons[i])
+                if buttons[i]["image"] == str(flag):
+                    buttons[i].config(bg="#f00", activebackground="#f00")
+
+                for b in buttons:
+                    b.bind("<Button-1>", lambda _: "break")
+                    b.unbind("<ButtonRelease-1>")
+                    b.unbind("<Button-3>")
+                    
     else:
         button.config(image=pressed)
         col = buttons.index(button) % cols
@@ -103,7 +129,7 @@ def toggle_flag(button):
     elif button["image"] == str(flag):
         button.config(image=empty, activebackground="#ececec")
         button.unbind("<Button-1>")
-        button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button) if check_mouse_position(button) else None)
+        button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else None)
 
 for row in range(rows):
     for col in range(cols):
@@ -111,14 +137,14 @@ for row in range(rows):
         buttons.append(button)
         button.config(bd=button_border, width=button_size, height=button_size, bg="#d9d9d9", activebackground="#ececec")
         button.grid(column=col, row=row)
-        button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button) if check_mouse_position(button) else None)
+        button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else None)
         button.bind("<Button-3>", lambda event, button=button: toggle_flag(button))
         game.columnconfigure(col, minsize=button_all+4)
     game.rowconfigure(row, minsize=button_all+4)
 
 
 # Start mainloop
-for child in game.winfo_children():
-    child.grid_configure(padx=0, pady=0)
+for child in mainframe.winfo_children():
+    child.grid_configure(padx=5, pady=5)
 
 root.mainloop()
