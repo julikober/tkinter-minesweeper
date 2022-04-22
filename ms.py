@@ -71,7 +71,6 @@ mine_img = Image.open("./img/Minesweeper_mine.png")
 mine_img = mine_img.resize((button_all, button_all))
 
 empty = PhotoImage()
-#pressed = PhotoImage()
 
 flag = ImageTk.PhotoImage(flag_img)
 mine = ImageTk.PhotoImage(mine_img)
@@ -121,8 +120,6 @@ def show_result(button, e = None):
                         buttons[i].config(bg="#f00", activebackground="#f00")
 
                     for b in buttons:
-                        if b["image"] == str(empty):
-                            b.config(activebackground="#d9d9d9")
                         b.bind("<Button-1>", lambda _: "break")
                         b.unbind("<ButtonRelease-1>")
                         b.unbind("<Button-3>")
@@ -146,11 +143,11 @@ def show_result(button, e = None):
 
 def toggle_flag(button):
     if button["image"] == str(empty):
-        button.config(image=flag, activebackground="#d9d9d9")
+        button.config(image=flag)
         button.unbind("<ButtonRelease-1>")
         button.bind("<Button-1>", lambda _: "break")
     elif button["image"] == str(flag):
-        button.config(image=empty, activebackground="#ececec")
+        button.config(image=empty)
         button.unbind("<Button-1>")
         button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else None)
 
@@ -158,7 +155,7 @@ for row in range(rows):
     for col in range(cols):
         button = Button(game, image=empty, padx=0, pady=0)
         buttons.append(button)
-        button.config(bd=button_border, width=button_size, height=button_size, bg="#d9d9d9", activebackground="#ececec")
+        button.config(bd=button_border, width=button_size, height=button_size, bg="#d9d9d9", activebackground="#d9d9d9")
         button.grid(column=col, row=row, sticky=("N", "W"))
         button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else None)
         button.bind("<Button-3>", lambda event, button=button: toggle_flag(button))
