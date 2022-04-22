@@ -17,10 +17,15 @@ cheat.geometry("1x1")
 mainframe = Frame(root, bg = "#d9d9d9", padx=5, pady=5)
 mainframe.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
 
-top = Frame(mainframe, bg="#d9d9d9", bd=3, relief="sunken")
+top = Frame(mainframe, bg="#d9d9d9", bd=3, relief="sunken", pady=5, padx=5)
 top.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
 
-Label(top).pack()
+counter_border = Frame(top, bg="#d9d9d9", bd=1, relief="sunken")
+counter_border.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
+
+counter = Frame(counter_border, bg="#000")
+counter.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
+
 
 game_border = Frame(mainframe, bg="#d9d9d9", bd=6, relief="sunken")
 game_border.grid(column=0, row=1, sticky=("N", "W", "E", "S"))
@@ -76,12 +81,19 @@ flag = ImageTk.PhotoImage(flag_img)
 mine = ImageTk.PhotoImage(mine_img)
 
 icons = [mine]
+digits = []
 
 for i in range(8):
     img = Image.open(f"./img/Minesweeper_{i+1}.png")
     img = img.resize((button_all, button_all))
 
     icons.append(ImageTk.PhotoImage(img))
+
+for i in range(9):
+    img = Image.open(f"./img/digit_{i}.png")
+    img = img.resize((18, 36))
+
+    digits.append(ImageTk.PhotoImage(img))
 
 def check_mouse_position(button):
     bx = button.winfo_rootx()
@@ -106,6 +118,9 @@ def show_result(button, e = None):
     button.bind("<Button-1>", lambda _: "break")
     index = buttons.index(button)
     
+    if button["image"] == str(flag):
+        button.config(image=empty)
+
     icon = fields[index]
     if icon is not None:
         button.config(image=icons[icon])
@@ -142,7 +157,7 @@ def show_result(button, e = None):
         root.destroy()
 
 def toggle_flag(button):
-    if button["image"] == str(empty):
+    if button["image"] == str(empty) and not pressed[buttons.index(button)]:
         button.config(image=flag)
         button.unbind("<ButtonRelease-1>")
         button.bind("<Button-1>", lambda _: "break")
@@ -163,7 +178,9 @@ for row in range(rows):
         game.columnconfigure(col, minsize=button_all+4)
     game.rowconfigure(row, minsize=button_all+4)
 
-
+Label(counter, image=digits[4], bd=0).grid(column=0, row=0, padx=2, pady=2)
+Label(counter, image=digits[2], bd=0).grid(column=1, row=0, padx=2, pady=2)
+Label(counter, image=digits[0], bd=0).grid(column=2, row=0, padx=2, pady=2)
 # Start mainloop
 for child in mainframe.winfo_children():
     child.grid_configure(padx=5, pady=5)
