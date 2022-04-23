@@ -1,13 +1,8 @@
 # Author: Julian Kober
 
-from configparser import Interpolation
-from tkinter import Tk, StringVar, Radiobutton, IntVar, Button, PhotoImage, Frame, Label, Toplevel
-from tkinter import ttk
+from tkinter import Tk, Button, PhotoImage, Frame, Label, Toplevel
 from PIL import Image, ImageTk
 import random
-import sys
-import cv2
-from pygments import highlight
 
 # Main Window
 root = Tk()
@@ -83,22 +78,23 @@ for i in range(10):
 
     digits.append(ImageTk.PhotoImage(img))
 
-timer_border = Frame(top, bg="#d9d9d9", bd=1, relief="sunken")
-timer_border.grid(column=0, row=0)
+mine_counter_border = Frame(top, bg="#d9d9d9", bd=1, relief="sunken")
+mine_counter_border.grid(column=0, row=0)
 
-timer = Frame(timer_border, bg="#000")
-timer.grid(column=0, row=0)
+mine_counter = Frame(mine_counter_border, bg="#000")
+mine_counter.grid(column=0, row=0)
 
 smiley_button = Button(top, image=smiley, bd=button_border, width=int(button_size*(3/2)), height=int(button_size*(3/2)))
 smiley_button.config(highlightthickness=0, bg="#d9d9d9", activebackground="#d9d9d9")
 smiley_button.grid(column=1, row=0)
 smiley_button.bind("<ButtonRelease-1>", lambda event, button=smiley_button: start_game() if check_mouse_position(button) else None)
 
-mine_counter_border = Frame(top, bg="#d9d9d9", bd=1, relief="sunken")
-mine_counter_border.grid(column=2, row=0)
+timer_border = Frame(top, bg="#d9d9d9", bd=1, relief="sunken")
+timer_border.grid(column=2, row=0)
 
-mine_counter = Frame(mine_counter_border, bg="#000")
-mine_counter.grid(column=0, row=0)
+timer = Frame(timer_border, bg="#000")
+timer.grid(column=0, row=0)
+
 
 for child in mainframe.winfo_children():
     child.grid_configure(padx=5, pady=5)
@@ -107,11 +103,39 @@ for digit in range(3):
     label = Label(mine_counter, image=digits[int("{0:03d}".format(mines)[digit])], bd=0)
     label.grid(column=digit, row=0)
 
+timer_digits = []
 
 for digit in range(3):
-    label = Label(timer, image=digits[int("{0:03d}".format(mines)[digit])], bd=0)
+    label = Label(timer, image=digits[0], bd=0)
     label.grid(column=digit, row=0)
+    timer_digits.append(label)
 
+class Timer():
+    def __init__(self):
+        self.time = 0
+        self.running = False
+
+    def start(self):
+        self.running = True
+        self.time = 0
+        root.after(1000, self.update)
+    
+    def update(self):
+        if self.running:
+            self.time += 1
+            for digit in range(3):
+                timer_digits[digit].config(image=digits[int("{0:03d}".format(self.time)[digit])])
+        
+            root.after(1000, self.update)
+
+    def stop(self):
+        self.running = False
+
+    def reset(self):
+        self.running = False
+        self.time = 0
+        for digit in range(3):
+            timer_digits[digit].config(image=digits[0])
 
 def check_mouse_position(button):
     bx = button.winfo_rootx()
@@ -136,6 +160,9 @@ def show_result(button, e = None):
     button.unbind("<ButtonRelease-1")
     button.bind("<Button-1>", lambda _: "break")
     index = buttons.index(button)
+
+    if len([x for x in pressed if x]) == 0:
+        timer.start()
     
     if e:
         smiley_button.config(image=smiley)
@@ -149,6 +176,7 @@ def show_result(button, e = None):
 
         if icon == 0:
             if e:
+                timer.stop()
                 smiley_button.config(image=smiley_lose)
                 for i, field in enumerate(fields):
                     if field == 0:
@@ -184,6 +212,7 @@ def show_result(button, e = None):
             b.unbind("<ButtonRelease-1>")
             b.unbind("<Button-3>")
 
+        timer.stop()
         smiley_button.config(image=smiley_win)
 
 def toggle_flag(button):
@@ -197,6 +226,7 @@ def toggle_flag(button):
         button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else smiley_button.config(image=smiley))
 
 def start_game():
+    timer.reset()
     smiley_button.config(image=smiley)
     fields.clear()
     pressed.clear()
@@ -206,6 +236,7 @@ def start_game():
         button.unbind("<Button-3>")
         button.unbind("<Enter>")
     buttons.clear()
+
     for field in range(rows*cols):
         pressed.append(False)
         if field < mines:
@@ -240,5 +271,6 @@ def start_game():
         game.rowconfigure(row, minsize=button_all+2)
 
 if __name__ == "__main__":
+    timer = Timer()
     start_game()
     root.mainloop()
