@@ -161,7 +161,7 @@ def show_result(button, e = None):
     button.bind("<Button-1>", lambda _: "break")
     index = buttons.index(button)
 
-    if len([x for x in pressed if x]) == 0:
+    if len([x for x in pressed if x]) == 0 and e:
         timer.start()
     
     if e:
