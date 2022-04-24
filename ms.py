@@ -1,9 +1,10 @@
 # Author: Julian Kober
 
-from tkinter import Tk, Button, PhotoImage, Frame, Label, Toplevel
+from tkinter import Tk, Button, PhotoImage, Frame, Label, Toplevel, Menu
 from PIL import Image, ImageTk
 import random
 import math
+from tkinter import ttk
 
 # Main Window
 root = Tk()
@@ -26,7 +27,6 @@ game = Frame(game_border, bg="#737373")
 game.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
-
 
 modes = {"Beginner": [9, 9, 10],
          "Intermediate": [16, 16, 40],
@@ -222,6 +222,9 @@ def show_result(button, e = None):
             b.unbind("<ButtonRelease-1>")
             b.unbind("<Button-3>")
 
+        for digit in range(3):
+            mine_counter_digits[digit].config(image=digits[0])
+
         timer.stop()
         smiley_button.config(image=smiley_win)
 
@@ -246,9 +249,12 @@ def start_game():
     smiley_button.config(image=smiley)
     fields.clear()
     pressed.clear()
+    flags.clear()
     for button in buttons:
         button.destroy()
     buttons.clear()
+    for digit in range(3):
+        mine_counter_digits[digit].config(image=digits[int("{0:03d}".format(mines)[digit])])
 
     for field in range(rows*cols):
         pressed.append(False)
@@ -287,4 +293,24 @@ def start_game():
 if __name__ == "__main__":
     timer = Timer()
     start_game()
+    menubar = Menu(root)
+    menubar.config(bd=0, )
+    game_menu=Menu(menubar, tearoff=0)
+    game_menu.config(bd=0)
+    game_menu.add_command(label="New", accelerator="F2", command=start_game)
+    game_menu.add_separator()
+    game_menu.add_radiobutton(label="Beginner", command=lambda: start_game(), value=0)
+    game_menu.add_radiobutton(label="Intermediate", command=lambda: start_game(), value=1)
+    game_menu.add_radiobutton(label="Expert", command=lambda: start_game(), value=2)
+    game_menu.add_separator()
+    game_menu.add_checkbutton(label="Marks (?)")
+    game_menu.add_checkbutton(label="Color")
+    game_menu.add_checkbutton(label="Sound")
+    game_menu.add_separator()
+    game_menu.add_command(label="Best Times...")
+    game_menu.add_separator()
+    game_menu.add_command(label="Exit", command=root.quit)
+
+    menubar.add_cascade(label="Game", menu=game_menu)
+    root.config(menu=menubar)
     root.mainloop()
