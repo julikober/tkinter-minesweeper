@@ -31,7 +31,7 @@ modes = [{"mode": "Beginner", "rows": 9, "cols": 9, "mines": 10},
          {"mode": "Intermediate", "rows": 16, "cols": 16, "mines": 40},
          {"mode": "Expert", "rows": 16, "cols": 30, "mines": 99}]
 mode_var = IntVar()
-rows = 9
+rows = 10
 cols = 9
 button_size = 16
 button_border = 3
@@ -39,10 +39,10 @@ mines = 10
 
 button_all = button_size + 2 * button_border
 
-fields = []
+#fields = []
 buttons = []
-pressed = []
-flags = []
+#pressed = []
+#flags = []
 
 flag_img = Image.open("./img/pixel_flag.png")
 flag_img = flag_img.resize((button_all, button_all))
@@ -58,7 +58,6 @@ smiley_win = Image.open("./img/pixel_smiley_win.png")
 smiley_win = smiley_win.resize((int(button_all*(3/2)), int(button_all*(3/2))))
 smiley_click = Image.open("./img/pixel_smiley_click.png")
 smiley_click = smiley_click.resize((int(button_all*(3/2)), int(button_all*(3/2))))
-
 empty = PhotoImage()
 
 flag = ImageTk.PhotoImage(flag_img)
@@ -122,6 +121,14 @@ for digit in range(3):
     label.grid(column=digit, row=0)
     timer_digits.append(label)
 
+class GameButton(Button):
+    def __init__(self, master=None, cnf={}, **kw):
+        self.button = super().__init__(master, cnf, **kw)
+        self.neighbours = []
+        self.value = None
+        self.flag = False
+        self.pressed = False
+
 class Timer():
     def __init__(self):
         self.time = 0
@@ -149,15 +156,16 @@ class Timer():
         for digit in range(3):
             timer_digits[digit].config(image=digits["0"])
 
-def set_numbers(col, row):
-    if fields[col+row*cols] != 0:
+def set_numbers(button):
+    if button.value != 0:
         mine_count = 0
-        for x in range(max(col-1, 0), min(col+1, cols - 1) + 1):
-            for y in range(max(row-1, 0), min(row+1, rows - 1) + 1):
-                if fields[x+y*cols] == 0:
-                    mine_count += 1
+
+        for neighbour in button.neighbours:
+            if neighbour.value == 0:
+                mine_count += 1
+
         if mine_count > 0:
-            fields[col+row*cols] = mine_count
+            button.value = mine_count
 
 def check_mouse_position(button):
     bx = button.winfo_rootx()
@@ -169,7 +177,7 @@ def check_mouse_position(button):
         return True
 
 def update_cheat(button):
-    if fields[buttons.index(button)] == 0:
+    if button.value == 0:
         cheat.config(bg="#000")
     else:
         cheat.config(bg="#fff")
@@ -183,43 +191,35 @@ def show_result(button, e = None):
                   activebackground="#c0c0c0")
     button.unbind("<ButtonRelease-1")
     button.bind("<Button-1>", lambda _: "break")
-    index = buttons.index(button)
 
-    if len([x for x in pressed if x]) == 0 and e:
+    if len([col.pressed for col in [row for row in buttons] if col.pressed]) == 0 and e:
         timer.start()
-        if fields[index] == 0:
-            for i, field in enumerate(fields):
-                if field != 0:
-                    
-                    fields[index] = None
-                    col = index % cols
-                    row = index // cols
-                    set_numbers(col, row)
+        if button.value == 0:
+            for i, value in enumerate([button.value for button in buttons]):
+                if value != 0:
+                    buttons[i].value = 0
+                    for neighbour in buttons[i].neighbours:
+                        set_numbers(buttons[i])
 
-                    fields[i] = 0
-                    col = i % cols
-                    row = i // cols
-                    for x in range(max(col-1, 0), min(col+1, cols - 1) + 1):
-                        for y in range(max(row-1, 0), min(row+1, rows - 1) + 1):
-                            set_numbers(x, y)
+                    button.value = None
+                    set_numbers(button)
                     break
     
     if e:
         smiley_button.config(image=smiley)
 
-    icon = fields[index]
-    if icon is not None:
-        button.config(image=icons[icon])
+    if button.value is not None:
+        button.config(image=icons[button.value])
 
-        if icon == 0:
+        if button.value == 0:
             if e:
                 timer.stop()
                 smiley_button.config(image=smiley_lose)
-                for i, field in enumerate(fields):
-                    if field == 0:
+                for i, value in enumerate([button.value for button in buttons]):
+                    if value == 0:
                         show_result(buttons[i])
                     if buttons[i]["image"] == str(flag):
-                        if field == 0:
+                        if value == 0:
                             buttons[i].config(image=mine)
                         else:
                             buttons[i].config(image=wrong_mine)
@@ -231,20 +231,17 @@ def show_result(button, e = None):
 
                 button.config(bg="#f00", activebackground="#f00")
         else:
-            pressed[index] = True
+            button.pressed = True
         
     else:
-        pressed[index] = True
-        col = index % cols
-        row = index // cols
-        for x in range(max(col-1, 0), min(col+1, cols - 1) + 1):
-            for y in range(max(row-1, 0), min(row+1, rows - 1) + 1):
-                if not pressed[x+y*cols]:
-                    show_result(buttons[x+y*cols])
+        button.pressed = True
+        for neighbour in button.neighbours:
+            if not neighbour.pressed:
+                show_result(neighbour)
                     
-    if len([x for x in pressed if x]) == rows*cols - mines:
-        for i, b in enumerate(buttons):
-            if not pressed[i]:
+    if len([button.pressed for button in buttons if button.pressed]) == rows*cols - mines:
+        for b in buttons:
+            if not b.pressed:
                 b.config(image=flag)
 
         for b in buttons:
@@ -253,24 +250,24 @@ def show_result(button, e = None):
             b.unbind("<Button-3>")
 
         for digit in range(3):
-            mine_counter_digits[digit].config(image=digits[0])
+            mine_counter_digits[digit].config(image=digits["0"])
 
         timer.stop()
         smiley_button.config(image=smiley_win)
 
 def toggle_flag(button):
-    if button["image"] == str(empty) and not pressed[buttons.index(button)]:
+    if button["image"] == str(empty) and not button.pressed:
         button.config(image=flag)
         button.unbind("<ButtonRelease-1>")
         button.bind("<Button-1>", lambda _: "break")
-        flags[buttons.index(button)] = True
+        button.flag = True
     elif button["image"] == str(flag):
         button.config(image=empty)
         button.unbind("<Button-1>")
         button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else smiley_button.config(image=smiley))
-        flags[buttons.index(button)] = False
+        button.flag = False
     
-    mine_count = mines - len([x for x in flags if x])
+    mine_count = mines - len([button.flag for button in buttons if button.flag])
     for digit in range(3):
         mine_counter_digits[digit].config(image=digits["{0:03d}".format(mine_count)[digit]])
 
@@ -281,34 +278,19 @@ def start_game():
     mines = modes[mode_var.get()]["mines"]
     print(rows, cols, mines)
     timer.reset()
+
     smiley_button.config(image=smiley)
-    fields.clear()
-    pressed.clear()
-    flags.clear()
-    for button in buttons:
+
+    for button in [row for row in buttons]:
         button.destroy()
     buttons.clear()
+
     for digit in range(3):
         mine_counter_digits[digit].config(image=digits["{0:03d}".format(mines)[digit]])
 
-    for field in range(rows*cols):
-        pressed.append(False)
-        flags.append(False)
-        if field < mines:
-            fields.append(0)
-        else:
-            fields.append(None)
-
-    random.shuffle(fields)
-
-    
-    for col in range(cols):
-        for row in range(rows):
-            set_numbers(col, row)
-
     for row in range(rows):
         for col in range(cols):
-            button = Button(game, image=empty, padx=0, pady=0)
+            button = GameButton(game, image=empty, padx=0, pady=0)
             buttons.append(button)
             button.config(bd=button_border, width=button_size, height=button_size, bg="#c0c0c0", activebackground="#c0c0c0", highlightthickness=0)
             button.grid(column=col, row=row)
@@ -318,6 +300,21 @@ def start_game():
             button.bind("<Button-1>", lambda _: smiley_button.config(image=smiley_click))
             game.columnconfigure(col, minsize=button_all+2)
         game.rowconfigure(row, minsize=button_all+2)
+    
+
+    mine_fields = random.sample(range(rows*cols), mines)
+    for row in range(rows):
+        for col in range(cols):
+            for x in range(max(row-1, 0), min(row+1, rows - 1) + 1):
+                for y in range(max(col-1, 0), min(col+1, cols - 1) + 1):
+                    if buttons[x*cols + y] != buttons[row*cols + col]:
+                        buttons[row*cols + col].neighbours.append(buttons[x*cols + y])
+
+            if (row*cols + col) in mine_fields:
+                buttons[row*cols + col].value = 0
+
+    for button in buttons:
+        set_numbers(button)
 
 if __name__ == "__main__":
     timer = Timer()
