@@ -1,7 +1,6 @@
 # Author: Julian Kober
 
 from tkinter import Tk, Button, PhotoImage, Frame, Label, Toplevel, Menu, IntVar
-from tracemalloc import start
 from PIL import Image, ImageTk
 import random
 import math
@@ -10,6 +9,7 @@ from tkinter import ttk
 # Main Window
 root = Tk()
 root.resizable(False, False)
+root.title("Minesweeper")
 
 cheat = Toplevel(root)
 cheat.overrideredirect(True)
@@ -39,10 +39,7 @@ mines = 10
 
 button_all = button_size + 2 * button_border
 
-#fields = []
 buttons = []
-#pressed = []
-#flags = []
 
 flag_img = Image.open("./img/pixel_flag.png")
 flag_img = flag_img.resize((button_all, button_all))
@@ -142,7 +139,7 @@ class Timer():
     def update(self):
         self.time += 1
         for digit in range(3):
-            timer_digits[digit].config(image=digits["{0:03d}".format(self.time)[digit]])
+            timer_digits[digit].config(image=digits["{0:03d}".format(self.time % 1000)[digit]])
     
         self.timer = root.after(1000, self.update)
 
@@ -267,16 +264,15 @@ def toggle_flag(button):
         button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else smiley_button.config(image=smiley))
         button.flag = False
     
-    mine_count = mines - len([button.flag for button in buttons if button.flag])
+    mine_count = len([button.flag for button in buttons if button.flag])
     for digit in range(3):
-        mine_counter_digits[digit].config(image=digits["{0:03d}".format(mine_count)[digit]])
+        mine_counter_digits[digit].config(image=digits["{0:03d}".format(mines - 100 - mine_count % -100)[digit]])
 
 def start_game():
     global rows, cols, mines
     rows = modes[mode_var.get()]["rows"]
     cols = modes[mode_var.get()]["cols"]
     mines = modes[mode_var.get()]["mines"]
-    print(rows, cols, mines)
     timer.reset()
 
     smiley_button.config(image=smiley)
