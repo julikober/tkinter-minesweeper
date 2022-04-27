@@ -1,6 +1,7 @@
 # Author: Julian Kober
 
-from tkinter import Tk, Button, PhotoImage, Frame, Label, Toplevel, Menu
+from tkinter import Tk, Button, PhotoImage, Frame, Label, Toplevel, Menu, IntVar
+from tracemalloc import start
 from PIL import Image, ImageTk
 import random
 import math
@@ -25,16 +26,15 @@ game_border = Frame(mainframe, bg="#c0c0c0", bd=3, relief="sunken")
 game_border.grid(column=0, row=1, sticky=("N", "W", "E", "S"))
 game = Frame(game_border, bg="#737373")
 game.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
-root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=1)
 
-modes = {"Beginner": [9, 9, 10],
-         "Intermediate": [16, 16, 40],
-         "Expert": [30, 16, 99]}
+modes = [{"mode": "Beginner", "rows": 9, "cols": 9, "mines": 10},
+         {"mode": "Intermediate", "rows": 16, "cols": 16, "mines": 40},
+         {"mode": "Expert", "rows": 16, "cols": 30, "mines": 99}]
+mode_var = IntVar()
 rows = 9
 cols = 9
-button_size = 12
-button_border = 2
+button_size = 16
+button_border = 3
 mines = 10
 
 button_all = button_size + 2 * button_border
@@ -70,7 +70,7 @@ smiley_click = ImageTk.PhotoImage(smiley_click)
 wrong_mine = ImageTk.PhotoImage(wrong_mine_img)
 
 icons = [mine]
-digits = []
+digits = {}
 
 for i in range(8):
     img = Image.open(f"./img/pixel_{i+1}.png")
@@ -82,7 +82,11 @@ for i in range(10):
     img = Image.open(f"./img/pixel_digit_{i}.png")
     img = img.resize((round(button_all*(13/16)), round(button_all*(23/16))))
 
-    digits.append(ImageTk.PhotoImage(img))
+    digits[str(i)] = ImageTk.PhotoImage(img)
+
+digit_minus_img = Image.open("./img/pixel_digit_minus.png")
+digit_minus_img = digit_minus_img.resize((round(button_all*(13/16)), round(button_all*(23/16))))
+digits["-"] = ImageTk.PhotoImage(digit_minus_img)
 
 mine_counter_border = Frame(top, bg="#c0c0c0", bd=1, relief="sunken")
 mine_counter_border.grid(column=0, row=0)
@@ -109,12 +113,12 @@ mine_counter_digits = []
 timer_digits = []
 
 for digit in range(3):
-    label = Label(mine_counter, image=digits[int("{0:03d}".format(mines)[digit])], bd=0)
+    label = Label(mine_counter, image=digits["{0:03d}".format(mines)[digit]], bd=0)
     label.grid(column=digit, row=0)
     mine_counter_digits.append(label)
 
 for digit in range(3):
-    label = Label(timer, image=digits[0], bd=0)
+    label = Label(timer, image=digits["0"], bd=0)
     label.grid(column=digit, row=0)
     timer_digits.append(label)
 
@@ -131,7 +135,7 @@ class Timer():
     def update(self):
         self.time += 1
         for digit in range(3):
-            timer_digits[digit].config(image=digits[int("{0:03d}".format(self.time)[digit])])
+            timer_digits[digit].config(image=digits["{0:03d}".format(self.time)[digit]])
     
         self.timer = root.after(1000, self.update)
 
@@ -143,7 +147,17 @@ class Timer():
             root.after_cancel(self.timer)
         self.time = 0
         for digit in range(3):
-            timer_digits[digit].config(image=digits[0])
+            timer_digits[digit].config(image=digits["0"])
+
+def set_numbers(col, row):
+    if fields[col+row*cols] != 0:
+        mine_count = 0
+        for x in range(max(col-1, 0), min(col+1, cols - 1) + 1):
+            for y in range(max(row-1, 0), min(row+1, rows - 1) + 1):
+                if fields[x+y*cols] == 0:
+                    mine_count += 1
+        if mine_count > 0:
+            fields[col+row*cols] = mine_count
 
 def check_mouse_position(button):
     bx = button.winfo_rootx()
@@ -173,6 +187,22 @@ def show_result(button, e = None):
 
     if len([x for x in pressed if x]) == 0 and e:
         timer.start()
+        if fields[index] == 0:
+            for i, field in enumerate(fields):
+                if field != 0:
+                    
+                    fields[index] = None
+                    col = index % cols
+                    row = index // cols
+                    set_numbers(col, row)
+
+                    fields[i] = 0
+                    col = i % cols
+                    row = i // cols
+                    for x in range(max(col-1, 0), min(col+1, cols - 1) + 1):
+                        for y in range(max(row-1, 0), min(row+1, rows - 1) + 1):
+                            set_numbers(x, y)
+                    break
     
     if e:
         smiley_button.config(image=smiley)
@@ -242,9 +272,14 @@ def toggle_flag(button):
     
     mine_count = mines - len([x for x in flags if x])
     for digit in range(3):
-        mine_counter_digits[digit].config(image=digits[int("{0:03d}".format(mine_count)[digit])])
+        mine_counter_digits[digit].config(image=digits["{0:03d}".format(mine_count)[digit]])
 
 def start_game():
+    global rows, cols, mines
+    rows = modes[mode_var.get()]["rows"]
+    cols = modes[mode_var.get()]["cols"]
+    mines = modes[mode_var.get()]["mines"]
+    print(rows, cols, mines)
     timer.reset()
     smiley_button.config(image=smiley)
     fields.clear()
@@ -254,7 +289,7 @@ def start_game():
         button.destroy()
     buttons.clear()
     for digit in range(3):
-        mine_counter_digits[digit].config(image=digits[int("{0:03d}".format(mines)[digit])])
+        mine_counter_digits[digit].config(image=digits["{0:03d}".format(mines)[digit]])
 
     for field in range(rows*cols):
         pressed.append(False)
@@ -266,16 +301,10 @@ def start_game():
 
     random.shuffle(fields)
 
+    
     for col in range(cols):
         for row in range(rows):
-            if fields[col+row*cols] == None:
-                mine_count = 0
-                for x in range(max(col-1, 0), min(col+1, cols - 1) + 1):
-                    for y in range(max(row-1, 0), min(row+1, rows - 1) + 1):
-                        if fields[x+y*cols] == 0:
-                            mine_count += 1
-                if mine_count > 0:
-                    fields[col+row*cols] = mine_count
+            set_numbers(col, row)
 
     for row in range(rows):
         for col in range(cols):
@@ -299,9 +328,8 @@ if __name__ == "__main__":
     game_menu.config(bd=0)
     game_menu.add_command(label="New", accelerator="F2", command=start_game)
     game_menu.add_separator()
-    game_menu.add_radiobutton(label="Beginner", command=lambda: start_game(), value=0)
-    game_menu.add_radiobutton(label="Intermediate", command=lambda: start_game(), value=1)
-    game_menu.add_radiobutton(label="Expert", command=lambda: start_game(), value=2)
+    for mode in modes:
+        game_menu.add_checkbutton(label=mode["mode"], command=lambda: start_game(), onvalue=modes.index(mode), offvalue=modes.index(mode), variable=mode_var)
     game_menu.add_separator()
     game_menu.add_checkbutton(label="Marks (?)")
     game_menu.add_checkbutton(label="Color")
