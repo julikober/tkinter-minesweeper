@@ -15,7 +15,7 @@ cheat = Toplevel(root)
 cheat.overrideredirect(True)
 cheat.geometry("1x1")
 
-modes = [{"mode": "Beginner", "rows": 9, "cols": 9, "mines": 1},
+modes = [{"mode": "Beginner", "rows": 9, "cols": 9, "mines": 10},
          {"mode": "Intermediate", "rows": 16, "cols": 16, "mines": 40},
          {"mode": "Expert", "rows": 16, "cols": 30, "mines": 99}]
 mode_var = IntVar()
