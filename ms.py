@@ -28,6 +28,14 @@ marks = IntVar(value=1)
 
 button_all = button_size + 2 * border_size
 
+BUTTON_SUNKEN = {"borderwidth": 0,
+                  "width": button_all-border_size//2,
+                  "height": button_all-border_size//2}
+
+BUTTON_RAISED = {"borderwidth": border_size,
+                  "width": button_size,
+                  "height": button_size}
+
 buttons = []
 
 mainframe = Frame(root, bg = "#c0c0c0", padx=border_size*1.5, pady=border_size*1.5)
@@ -47,9 +55,9 @@ flag_img = flag_img.resize((button_all, button_all))
 mark_img = Image.open("./img/pixel_mark.png")
 mark_img = mark_img.resize((button_all, button_all))
 mine_img = Image.open("./img/pixel_mine.png")
-mine_img = mine_img.resize((button_all, button_all))
+mine_img = mine_img.resize((button_all, button_all)).crop((button_all//16, button_all//16, button_all, button_all))
 wrong_mine_img = Image.open("./img/pixel_wrong_mine.png")
-wrong_mine_img = wrong_mine_img.resize((button_all, button_all))
+wrong_mine_img = wrong_mine_img.resize((button_all, button_all)).crop((button_all//16, button_all//16, button_all, button_all))
 smiley_img = Image.open("./img/pixel_smiley.png")
 smiley_img = smiley_img.resize((int(button_all*(3/2)), int(button_all*(3/2))))
 smiley_lose = Image.open("./img/pixel_smiley_lose.png")
@@ -74,7 +82,7 @@ digits = {}
 
 for i in range(8):
     img = Image.open(f"./img/pixel_{i+1}.png")
-    img = img.resize((button_all, button_all))
+    img = img.resize((button_all, button_all)).crop((button_all//16, button_all//16, button_all, button_all))
 
     icons.append(ImageTk.PhotoImage(img))
 
@@ -94,7 +102,7 @@ mine_counter_border.grid(column=0, row=0)
 mine_counter = Frame(mine_counter_border, bg="#000")
 mine_counter.grid(column=0, row=0)
 
-reset_button = Label(top, image=smiley, bd=border_size, width=int(button_all*(3/2) - border_size*2), height=int(button_all*(3/2) - border_size*2), relief="raised")
+reset_button = Button(top, image=smiley, bd=border_size, width=int(button_all*(3/2) - border_size*2), height=int(button_all*(3/2) - border_size*2), relief="raised")
 reset_button.config(bg="#c0c0c0", activebackground="#c0c0c0", highlightbackground="#737373", highlightthickness=border_size//2)
 reset_button.grid(column=1, row=0)
 reset_button.bind("<ButtonRelease-1>", lambda event, button=reset_button, current=reset_button["image"]: start_game() if check_mouse_position(button) else None)
@@ -130,8 +138,13 @@ class GameButton(Label):
         self.flag = False
         self.mark = False
         self.pressed = False
-        self.y = None
-        self.x = None
+        self.sunken = False
+
+    def press(self):
+        pass
+
+    def release(self):
+        pass
 
 class Timer():
     def __init__(self):
@@ -188,14 +201,11 @@ def update_cheat(button):
         cheat.config(bg="#fff")
 
 def show_result(button: GameButton, e = None):
-    if not button or button.flag:
+    reset_button.config(image=smiley)
+
+    if not button or button.flag or button.pressed:
         return 
-    button.config(borderwidth=0,
-                  width=button_all-border_size//2,
-                  height=button_all-border_size//2,
-                  activebackground="#c0c0c0")
-    button.unbind("<ButtonRelease-1")
-    button.bind("<Button-1>", lambda _: "break")
+    button.config(**BUTTON_SUNKEN)
 
     if len([col.pressed for col in [row for row in buttons] if col.pressed]) == 0 and e:
         timer.start()
@@ -215,7 +225,6 @@ def show_result(button: GameButton, e = None):
                     break
     
     if e:
-        print(button.x, button.y)
         reset_button.config(image=smiley)
 
     if button.value is not None:
@@ -234,10 +243,8 @@ def show_result(button: GameButton, e = None):
                         show_result(buttons[i])
                         buttons[i].config(image=wrong_mine)
 
-                    for b in buttons:
-                        b.bind("<Button-1>", lambda _: "break")
-                        b.unbind("<ButtonRelease-1>")
-                        b.unbind("<Button-3>")
+                for b in buttons:
+                    b.pressed = True
 
                 button.config(bg="#f00", activebackground="#f00")
         else:
@@ -255,11 +262,6 @@ def show_result(button: GameButton, e = None):
             if not b.pressed:
                 b.config(image=flag)
 
-        for b in buttons:
-            b.bind("<Button-1>", lambda _: "break")
-            b.unbind("<ButtonRelease-1>")
-            b.unbind("<Button-3>")
-
         for digit in range(3):
             mine_counter_digits[digit].config(image=digits["0"])
 
@@ -267,23 +269,17 @@ def show_result(button: GameButton, e = None):
         reset_button.config(image=smiley_win)
 
 def toggle_flag(button: GameButton):
-    if not button.flag and not button.pressed and not button.mark:
+    if not button.flag and not button.pressed and not button.mark and not button.sunken:
         button.config(image=flag)
-        button.unbind("<ButtonRelease-1>")
-        button.bind("<Button-1>", lambda _: "break")
         button.flag = True
 
     elif button.flag and marks.get():
         button.config(image=mark)
-        button.unbind("<Button-1>")
-        button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else reset_button.config(image=smiley))
         button.flag = False
         button.mark = True
 
     elif not button.pressed:
         button.config(image=empty)
-        button.unbind("<Button-1>")
-        button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else reset_button.config(image=smiley))
         button.flag = False
         button.mark = False
     
@@ -291,20 +287,22 @@ def toggle_flag(button: GameButton):
     for digit in range(3):
         mine_counter_digits[digit].config(image=digits["{0:03d}".format(mines - 100 - ((mine_count + 1) % -100 - 1))[digit]])
 
-def update_button_press(before=None):
-    x = (game.winfo_pointerx() - game.winfo_rootx()) // button_all
-    y = (game.winfo_pointery() - game.winfo_rooty()) // button_all
-    print(x, y)
-    if x in range(cols) and y in range(rows):
-        if buttons[y*cols + x]["relief"] != "sunken":
-            buttons[y*cols + x].config(relief="sunken")
-            root.after(1, lambda: update_button_press(y*cols + x))
+def update_button_press():
+    x = (root.winfo_pointerx() - game.winfo_rootx()) // button_all
+    y = (root.winfo_pointery() - game.winfo_rooty()) // button_all
+    
+    for button in buttons:
+        if button.sunken and not button.pressed:
+            button.config(**BUTTON_RAISED)
+            button.sunken = False
 
-    if before is not None:
-        if before == y*cols + x:
-            root.after(1, lambda: update_button_press(before))
-        else:
-            buttons[before].config(relief="raised")
+    if not button.sunken and not button.pressed and not button.flag:
+        reset_button.config(image=smiley_click)
+        if x in range(cols) and y in range(rows):
+            button = buttons[y*cols + x]
+            button.config(**BUTTON_SUNKEN)
+            button.sunken = True
+
 
 def get_button():
     x = (game.winfo_pointerx() - game.winfo_rootx()) // button_all
@@ -332,14 +330,10 @@ def start_game():
         for col in range(cols):
             button = GameButton(game, image=empty, padx=0, pady=0, relief="raised")
             buttons.append(button)
-            button.config(bd=border_size, width=button_size, height=button_size, bg="#c0c0c0", activebackground="#c0c0c0", highlightthickness=0)
+            button.config(bg="#c0c0c0", highlightthickness=0, **BUTTON_RAISED)
             button.grid(column=col, row=row, sticky=("E", "S"))
-            #button.bind("<ButtonRelease-1>", lambda event, button=button: show_result(button, event) if check_mouse_position(button) else reset_button.config(image=smiley))
             button.bind("<Button-3>", lambda event, button=button: toggle_flag(button))
             button.bind("<Enter>", lambda event, button=button: update_cheat(button))
-            #button.bind("<Button-1>", lambda _: reset_button.config(image=smiley_click))
-            #button.bind("<B1-Motion>", lambda event, button=button: button.config(relief="sunken") if check_mouse_position(button) else button.config(relief="raised"))
-            #button.bind("<ButtonPress-1>", lambda event, button=button: button.config(relief="sunken"))
             game.columnconfigure(col, minsize=button_all)
         game.rowconfigure(row, minsize=button_all)
     
@@ -362,7 +356,7 @@ if __name__ == "__main__":
     timer = Timer()
     start_game()
     menubar = Menu(root)
-    menubar.config(bd=0, )
+    menubar.config(bd=0)
     game_menu=Menu(menubar, tearoff=0)
     game_menu.config(bd=0)
     game_menu.add_command(label="New", accelerator="F2", command=start_game)
@@ -383,4 +377,5 @@ if __name__ == "__main__":
     root.config(menu=menubar)
     root.bind("<B1-Motion>", lambda _: update_button_press())
     root.bind("<ButtonRelease-1>", lambda event: show_result(get_button(), event))
+    root.bind("<Button-1>", lambda _: update_button_press())
     root.mainloop()
