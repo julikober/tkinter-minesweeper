@@ -15,7 +15,7 @@ cheat = Toplevel(root)
 cheat.overrideredirect(True)
 cheat.geometry("1x1")
 
-modes = [{"mode": "Beginner", "rows": 9, "cols": 9, "mines": 10},
+modes = [{"mode": "Beginner", "rows": 9, "cols": 9, "mines": 1},
          {"mode": "Intermediate", "rows": 16, "cols": 16, "mines": 40},
          {"mode": "Expert", "rows": 16, "cols": 30, "mines": 99}]
 mode_var = IntVar()
@@ -201,7 +201,8 @@ def update_cheat(button):
         cheat.config(bg="#fff")
 
 def show_result(button: GameButton, e = None):
-    reset_button.config(image=smiley)
+    if e and len([button.pressed for button in buttons if button.pressed]) < rows*cols - mines:
+        reset_button.config(image=smiley)
 
     if not button or button.flag or button.pressed:
         return 
@@ -223,9 +224,6 @@ def show_result(button: GameButton, e = None):
                             neighbour.value = None
                         set_numbers(neighbour)
                     break
-    
-    if e:
-        reset_button.config(image=smiley)
 
     if button.value is not None:
         button.config(image=icons[button.value])
@@ -239,16 +237,14 @@ def show_result(button: GameButton, e = None):
                         show_result(buttons[i])
 
                     elif buttons[i].flag:
-                        buttons[i].flag = False
-                        show_result(buttons[i])
-                        buttons[i].config(image=wrong_mine)
+                        buttons[i].config(image=wrong_mine, **BUTTON_SUNKEN)
 
                 for b in buttons:
                     b.pressed = True
 
                 button.config(bg="#f00", activebackground="#f00")
-        else:
-            button.pressed = True
+            return
+        button.pressed = True
         
     else:
         button.config(image=empty)
@@ -261,6 +257,8 @@ def show_result(button: GameButton, e = None):
         for b in buttons:
             if not b.pressed:
                 b.config(image=flag)
+                b.flag = True
+                b.pressed = True
 
         for digit in range(3):
             mine_counter_digits[digit].config(image=digits["0"])
@@ -273,7 +271,7 @@ def toggle_flag(button: GameButton):
         button.config(image=flag)
         button.flag = True
 
-    elif button.flag and marks.get():
+    elif button.flag and marks.get() and not button.pressed:
         button.config(image=mark)
         button.flag = False
         button.mark = True
@@ -295,11 +293,12 @@ def update_button_press():
         if button.sunken and not button.pressed:
             button.config(**BUTTON_RAISED)
             button.sunken = False
+   
 
+    button = buttons[y*cols + x]
     if not button.sunken and not button.pressed and not button.flag:
         reset_button.config(image=smiley_click)
         if x in range(cols) and y in range(rows):
-            button = buttons[y*cols + x]
             button.config(**BUTTON_SUNKEN)
             button.sunken = True
 
