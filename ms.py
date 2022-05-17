@@ -1,33 +1,39 @@
 # Author: Julian Kober
 
+import tkinter
 from tkinter import Tk, Button, PhotoImage, Frame, Label, Toplevel, Menu, IntVar
 from PIL import Image, ImageTk
 import random
-import math
-from tkinter import ttk
 
 # Main Window
 root = Tk()
 root.resizable(False, False)
 root.title("Minesweeper")
 
-cheat = Toplevel(root)
-cheat.overrideredirect(True)
-cheat.geometry("1x1")
+cheat_window = Toplevel(root)
+cheat_window.overrideredirect(True)
+cheat_window.geometry("1x1")
+cheat_window.withdraw()
 
 modes = [{"mode": "Beginner", "rows": 9, "cols": 9, "mines": 10},
          {"mode": "Intermediate", "rows": 16, "cols": 16, "mines": 40},
          {"mode": "Expert", "rows": 16, "cols": 30, "mines": 99}]
+cheat_code = ["x", "y", "z", "z", "y", "Return"]
+cheat_code_index = 0
 mode_var = IntVar()
-rows = 10
+rows = 9
 cols = 9
+
+# Button settings
 button_size = 12
 border_size = 2
 mines = 10
-marks = IntVar(value=1)
 
 button_all = button_size + 2 * border_size
 
+marks = IntVar(value=1)
+
+# Button states
 BUTTON_SUNKEN = {"borderwidth": 0,
                   "width": button_all-border_size//2,
                   "height": button_all-border_size//2}
@@ -51,6 +57,7 @@ game = Frame(game_border, bg="#737373")
 game.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
 game.grid_propagate(0)
 
+# Images
 flag_img = Image.open("./img/pixel_flag.png")
 flag_img = flag_img.resize((button_all, button_all))
 mark_img = Image.open("./img/pixel_mark.png")
@@ -97,17 +104,20 @@ digit_minus_img = Image.open("./img/pixel_digit_minus.png")
 digit_minus_img = digit_minus_img.resize((round(button_all*(13/16)), round(button_all*(23/16))))
 digits["-"] = ImageTk.PhotoImage(digit_minus_img)
 
+# Mine Counter
 mine_counter_border = Frame(top, bg="#c0c0c0", bd=border_size//2, relief="sunken")
 mine_counter_border.grid(column=0, row=0)
 
 mine_counter = Frame(mine_counter_border, bg="#000")
 mine_counter.grid(column=0, row=0)
 
+# Reset Button with smiley
 reset_button = Button(top, image=smiley, bd=border_size, width=int(button_all*(3/2) - border_size*2), height=int(button_all*(3/2) - border_size*2), relief="raised")
 reset_button.config(bg="#c0c0c0", activebackground="#c0c0c0", highlightbackground="#737373", highlightthickness=border_size//2)
 reset_button.grid(column=1, row=0)
 reset_button.bind("<ButtonRelease-1>", lambda event, button=reset_button, current=reset_button["image"]: start_game() if check_mouse_position(button) else None)
 
+# Mine Counter
 timer_border = Frame(top, bg="#c0c0c0", bd=border_size//2, relief="sunken")
 timer_border.grid(column=2, row=0)
 
@@ -121,6 +131,7 @@ for child in mainframe.winfo_children():
 mine_counter_digits = []
 timer_digits = []
 
+# Set digits for timer and mine counter
 for digit in range(3):
     label = Label(mine_counter, image=digits["{0:03d}".format(mines)[digit]], bd=0, highlightthickness=0, pady=0, padx=0)
     label.grid(column=digit, row=0)
@@ -131,7 +142,9 @@ for digit in range(3):
     label.grid(column=digit, row=0)
     timer_digits.append(label)
 
+# Custom Game Button
 class GameButton(Label):
+    """Buttons with attributes"""
     def __init__(self, master=None, cnf={}, **kw):
         self.button = super().__init__(master, cnf, **kw)
         self.neighbours = []
@@ -141,17 +154,21 @@ class GameButton(Label):
         self.pressed = False
         self.sunken = False
 
+# Timer
 class Timer():
+    """Timer"""
     def __init__(self):
         self.time = 0
         self.running = False
         self.timer = None
 
     def start(self):
+        """Start Timer"""
         self.time = 0
         self.timer = root.after(1000, self.update)
     
     def update(self):
+        """Update Timer"""
         self.time += 1
         for digit in range(3):
             timer_digits[digit].config(image=digits["{0:03d}".format(self.time % 1000)[digit]])
@@ -160,16 +177,24 @@ class Timer():
             self.timer = root.after(1000, self.update)
 
     def stop(self):
+        """Stop Timer"""
         root.after_cancel(self.timer)
 
     def reset(self):
+        """Reset Timer"""
         if self.timer:
             root.after_cancel(self.timer)
         self.time = 0
         for digit in range(3):
             timer_digits[digit].config(image=digits["0"])
 
-def set_numbers(button):
+def set_numbers(button: GameButton):
+    """
+    Set button values
+
+    Args:
+        button (GameButton): Button to set values
+    """
     if button.value != 0:
         mine_count = 0
 
@@ -181,6 +206,12 @@ def set_numbers(button):
             button.value = mine_count
 
 def check_mouse_position(button: GameButton):
+    """
+    Check if mouse is over button after release
+    
+    Args:
+        button (GameButton): Button to check
+    """
     bx = button.winfo_rootx()
     by = button.winfo_rooty()
     mx = game.winfo_pointerx()
@@ -189,20 +220,53 @@ def check_mouse_position(button: GameButton):
     if mx - bx in range(size+2) and my - by in range(size+2):
         return True
 
-def update_cheat(button):
+def update_cheat(button: GameButton):
+    """
+    Update pixel color for cheat code
+    
+    Args:
+        button (GameButton): Button to update
+    """
     if button.value == 0:
-        cheat.config(bg="#000")
+        cheat_window.config(bg="#000")
     else:
-        cheat.config(bg="#fff")
+        cheat_window.config(bg="#fff")
+
+def activate_cheat(e: tkinter.Event):
+    """
+    Activate cheat code
+    
+    Args:
+        e (tkinter.Event): Event
+    """
+    global cheat_code_index
+    if e.keysym == cheat_code[cheat_code_index]:
+        cheat_code_index += 1
+    else:
+        cheat_code_index = 0
+
+
+    if cheat_code_index == len(cheat_code):
+        cheat_window.deiconify()
 
 def show_result(button: GameButton, e = None):
+    """
+    Show result after clicking button
+    
+    Args:
+        button (GameButton): Button that was clicked
+        e (tkinter.Event): Event that triggered the function
+    """
     if e and len([button.pressed for button in buttons if button.pressed]) < rows*cols - mines:
         reset_button.config(image=smiley)
 
     if not button or button.flag or button.pressed:
-        return 
+        return
+
+    # Change button state
     button.config(**BUTTON_SUNKEN)
 
+    # If first button is a mine, change position
     if len([col.pressed for col in [row for row in buttons] if col.pressed]) == 0 and e:
         timer.start()
         if button.value == 0:
@@ -223,6 +287,7 @@ def show_result(button: GameButton, e = None):
     if button.value is not None:
         button.config(image=icons[button.value])
 
+        # If button is mine, show all mines
         if button.value == 0:
             if e:
                 timer.stop()
@@ -247,7 +312,8 @@ def show_result(button: GameButton, e = None):
         for neighbour in button.neighbours:
             if not neighbour.pressed:
                 show_result(neighbour)
-                    
+
+    # Winning condition       
     if len([button.pressed for button in buttons if button.pressed]) == rows*cols - mines:
         for b in buttons:
             if not b.pressed:
@@ -262,10 +328,17 @@ def show_result(button: GameButton, e = None):
         reset_button.config(image=smiley_win)
 
 def toggle_flag(button: GameButton):
+    """
+    Toggle flag or mark
+    
+    Args:
+        button (GameButton): Button to toggle
+    """
     if not button.flag and not button.pressed and not button.mark and not button.sunken:
         button.config(image=flag)
         button.flag = True
 
+    # If marks are enabled and button is flagged, change to mark
     elif button.flag and marks.get() and not button.pressed:
         button.config(image=mark)
         button.flag = False
@@ -276,11 +349,13 @@ def toggle_flag(button: GameButton):
         button.flag = False
         button.mark = False
     
+    # Update mine counter
     mine_count = len([button.flag for button in buttons if button.flag])
     for digit in range(3):
         mine_counter_digits[digit].config(image=digits["{0:03d}".format(mines - 100 - ((mine_count + 1) % -100 - 1))[digit]])
 
 def update_button_press():
+    """Sinks button after clicking"""
     x = (root.winfo_pointerx() - game.winfo_rootx()) // button_all
     y = (root.winfo_pointery() - game.winfo_rooty()) // button_all
     
@@ -289,7 +364,8 @@ def update_button_press():
             button.config(**BUTTON_RAISED)
             button.sunken = False
 
-    reset_button.config(image=smiley_click)
+    if reset_button["image"] == str(smiley):
+        reset_button.config(image=smiley_click)
     
     if x in range(cols) and y in range(rows):
         button = buttons[y*cols + x]
@@ -299,12 +375,14 @@ def update_button_press():
 
 
 def get_button():
+    """Get button from mouse position"""
     x = (game.winfo_pointerx() - game.winfo_rootx()) // button_all
     y = (game.winfo_pointery() - game.winfo_rooty()) // button_all
     if x in range(cols) and y in range(rows):
         return buttons[y*cols + x]
 
 def start_game():
+    """Start game"""
     global rows, cols, mines
     rows = modes[mode_var.get()]["rows"]
     cols = modes[mode_var.get()]["cols"]
@@ -320,6 +398,7 @@ def start_game():
     for digit in range(3):
         mine_counter_digits[digit].config(image=digits["{0:03d}".format(mines)[digit]])
 
+    # Create field with buttons
     game.config(width=cols*button_all, height=rows*button_all)
     for row in range(rows):
         for col in range(cols):
@@ -333,6 +412,7 @@ def start_game():
         game.rowconfigure(row, minsize=button_all)
     
 
+    # Set random mines and check for numbers
     mine_fields = random.sample(range(rows*cols), mines)
     for row in range(rows):
         for col in range(cols):
@@ -350,27 +430,32 @@ def start_game():
 if __name__ == "__main__":
     timer = Timer()
     start_game()
+
+    # Game Menu
     menubar = Menu(root)
     menubar.config(bd=0)
-    game_menu=Menu(menubar, tearoff=0)
+    game_menu = Menu(menubar, tearoff=0)
     game_menu.config(bd=0)
-    game_menu.add_command(label="New", accelerator="F2", command=start_game)
+    game_menu.add_command(label="New", command=start_game)
     game_menu.add_separator()
     for mode in modes:
         game_menu.add_checkbutton(label=mode["mode"], command=lambda: start_game(), onvalue=modes.index(mode), offvalue=modes.index(mode), variable=mode_var)
-    game_menu.add_command(label="Custom...")
+    #game_menu.add_checkbutton(label="Custom...", command=open_custom_game, onvalue=len(modes), offvalue=len(modes), variable=mode_var)
     game_menu.add_separator()
     game_menu.add_checkbutton(label="Marks (?)", onvalue=1, offvalue=0, variable=marks)
     #game_menu.add_checkbutton(label="Color")
     #game_menu.add_checkbutton(label="Sound")
-    game_menu.add_separator()
-    game_menu.add_command(label="Best Times...")
+    #game_menu.add_separator()
+    #game_menu.add_command(label="Best Times...")
     game_menu.add_separator()
     game_menu.add_command(label="Exit", command=root.quit)
 
     menubar.add_cascade(label="Game", menu=game_menu)
+
+    # Bindings
     root.config(menu=menubar)
     root.bind("<B1-Motion>", lambda _: update_button_press())
     root.bind("<ButtonRelease-1>", lambda event: show_result(get_button(), event))
     root.bind("<Button-1>", lambda _: update_button_press())
+    root.bind("<KeyPress>", activate_cheat)
     root.mainloop()
