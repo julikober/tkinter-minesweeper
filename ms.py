@@ -49,6 +49,7 @@ game_border = Frame(mainframe, bg="#c0c0c0", bd=border_size*1.5, relief="sunken"
 game_border.grid(column=0, row=1, sticky=("N", "W", "E", "S"))
 game = Frame(game_border, bg="#737373")
 game.grid(column=0, row=0, sticky=("N", "W", "E", "S"))
+game.grid_propagate(0)
 
 flag_img = Image.open("./img/pixel_flag.png")
 flag_img = flag_img.resize((button_all, button_all))
@@ -121,12 +122,12 @@ mine_counter_digits = []
 timer_digits = []
 
 for digit in range(3):
-    label = Label(mine_counter, image=digits["{0:03d}".format(mines)[digit]], bd=0)
+    label = Label(mine_counter, image=digits["{0:03d}".format(mines)[digit]], bd=0, highlightthickness=0, pady=0, padx=0)
     label.grid(column=digit, row=0)
     mine_counter_digits.append(label)
 
 for digit in range(3):
-    label = Label(timer, image=digits["0"], bd=0)
+    label = Label(timer, image=digits["0"], bd=0, highlightthickness=0, pady=0, padx=0)
     label.grid(column=digit, row=0)
     timer_digits.append(label)
 
@@ -139,12 +140,6 @@ class GameButton(Label):
         self.mark = False
         self.pressed = False
         self.sunken = False
-
-    def press(self):
-        pass
-
-    def release(self):
-        pass
 
 class Timer():
     def __init__(self):
@@ -293,12 +288,12 @@ def update_button_press():
         if button.sunken and not button.pressed:
             button.config(**BUTTON_RAISED)
             button.sunken = False
-   
 
-    button = buttons[y*cols + x]
-    if not button.sunken and not button.pressed and not button.flag:
-        reset_button.config(image=smiley_click)
-        if x in range(cols) and y in range(rows):
+    reset_button.config(image=smiley_click)
+    
+    if x in range(cols) and y in range(rows):
+        button = buttons[y*cols + x]
+        if not button.sunken and not button.pressed and not button.flag:
             button.config(**BUTTON_SUNKEN)
             button.sunken = True
 
@@ -325,6 +320,7 @@ def start_game():
     for digit in range(3):
         mine_counter_digits[digit].config(image=digits["{0:03d}".format(mines)[digit]])
 
+    game.config(width=cols*button_all, height=rows*button_all)
     for row in range(rows):
         for col in range(cols):
             button = GameButton(game, image=empty, padx=0, pady=0, relief="raised")
